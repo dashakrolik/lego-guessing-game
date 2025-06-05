@@ -1,8 +1,17 @@
 from fastapi import FastAPI
 from lego_api import get_random_set
 from model import LegoSet
+from starlette.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware, # gives warning but is common, can ignore
+    allow_origins=["*"],  # change this to Vue dev server later
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/random-set")
 def random_set():
