@@ -2,6 +2,7 @@ import os
 import requests
 from dotenv import load_dotenv
 from model import LegoSet
+import random
 
 load_dotenv()
 
@@ -26,14 +27,33 @@ def get_theme_name(theme_id: int) -> str:
     return theme_name
 
 def get_random_set():
-    response = requests.get(f"{BASE_URL}?page_size=1&ordering=random", headers=HEADERS, verify=False)
-    response.raise_for_status()
-    results = response.json().get("results", [])
+    # Step 1: get total number of sets
+    meta_response = requests.get(f"{BASE_URL}?page_size=1", headers=HEADERS, verify=False)
+    meta_response.raise_for_status()
+    total = meta_response.json().get("count", 0)
 
-    if not results:
+    if total == 0:
         return None
 
-    raw_set = results[0]
+    # Step 2: pick random index
+    rand_index = random.randint(0, total - 1)
+    page_size = 100  # max page size allowed
+    page = rand_index // page_size
+    index_on_page = rand_index % page_size
+
+    # Step 3: fetch that page
+    page_response = requests.get(
+        f"{BASE_URL}?page_size={page_size}&page={page + 1}",  # pages are 1-indexed
+        headers=HEADERS,
+        verify=False
+    )
+    page_response.raise_for_status()
+    results = page_response.json().get("results", [])
+
+    if not results or index_on_page >= len(results):
+        return None
+
+    raw_set = results[index_on_page]
     theme_name = get_theme_name(raw_set['theme_id'])
 
     return LegoSet(
@@ -43,5 +63,3 @@ def get_random_set():
         theme=theme_name,
         image_url=raw_set.get('set_img_url')
     )
-
-
